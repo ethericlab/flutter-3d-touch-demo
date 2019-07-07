@@ -4,6 +4,8 @@ class Colors {
   static const black = Color(0xff060518);
   static const white = Color(0xffffffff);
   static const blue = Color(0xff0029FF);
+  static const gray = Color(0xffAAAABF);
+  static const darkGray = Color(0xff9494A3);
 }
 
 class Fonts {
