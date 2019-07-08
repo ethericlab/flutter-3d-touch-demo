@@ -6,6 +6,7 @@ class Colors {
   static const blue = Color(0xff0029FF);
   static const gray = Color(0xffAAAABF);
   static const darkGray = Color(0xff9494A3);
+  static const darkSlateBlue = Color(0xff493E83);
 }
 
 class Fonts {

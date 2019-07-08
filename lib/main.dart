@@ -175,38 +175,67 @@ class TimeSelect extends StatefulWidget {
 }
 
 class _TimeSelectState extends State<TimeSelect> {
-  DayPeriod _selectedDayPeriod = DayPeriod.morning;
-  ScrollController _scrollController;
+  var _selectedDayPeriod = DayPeriod.morning;
+  int _selectedHour;
+  PageController _pageController;
 
   @override
   void initState() {
-    _scrollController = ScrollController();
+    _pageController = PageController();
     super.initState();
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _pageController.dispose();
+    super.dispose();
   }
 
-  int _periodToTime(DayPeriod period) {
+  int _periodToPageIndex(DayPeriod period) {
     switch (period) {
       case DayPeriod.morning:
-        return 4;
+        return 0;
       case DayPeriod.day:
-        return 12;
+        return 1;
       case DayPeriod.evening:
-        return 20;
+        return 2;
+
+      default:
+        return 0;
     }
   }
 
-  void handleSelectPeriod(DayPeriod period) {
-    _scrollController.animateTo(40 + (_periodToTime(period) / 2) * (145 + 40),
-        curve: Curves.easeInOutCubic, duration: Duration(milliseconds: 400));
+  DayPeriod _pageIndexToPeriod(int page) {
+    switch (page) {
+      case 0:
+        return DayPeriod.morning;
+      case 1:
+        return DayPeriod.day;
+      case 2:
+        return DayPeriod.evening;
 
-      setState(() {
-        _selectedDayPeriod = period;
-      });
+      default:
+        return DayPeriod.morning;
+    }
+  }
+
+  void handlePageChange(int page) {
+    setState(() {
+      _selectedDayPeriod = _pageIndexToPeriod(page);
+    });
+  }
+
+  void handlePeriodSelect(DayPeriod period) {
+    _pageController.animateToPage(_periodToPageIndex(period), duration: Duration(milliseconds: 400), curve: Curves.easeInOut);
+    setState(() {
+      _selectedDayPeriod = period;
+    });
+  }
+  
+  void handleTimeSelect(int hour) {
+    setState(() {
+      _selectedHour = _selectedHour == hour ? null : hour;
+    });
   }
 
   @override
@@ -222,11 +251,29 @@ class _TimeSelectState extends State<TimeSelect> {
             SizedBox(height: 34),
             DayPeriodSelect(
               selectedPeriod: _selectedDayPeriod,
-              onSelect: handleSelectPeriod,
+              onSelect: handlePeriodSelect,
             ),
             Expanded(
-              child: TimeOfDaySelect(
-                controller: _scrollController,
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: handlePageChange,
+                children: <Widget>[
+                  TimeOfDayPage(
+                    forPeriod: DayPeriod.morning,
+                    onSelect: handleTimeSelect,
+                    selectedHour: _selectedHour,
+                  ),
+                  TimeOfDayPage(
+                    forPeriod: DayPeriod.day,
+                    onSelect: handleTimeSelect,
+                    selectedHour: _selectedHour,
+                  ),
+                  TimeOfDayPage(
+                    forPeriod: DayPeriod.evening,
+                    onSelect: handleTimeSelect,
+                    selectedHour: _selectedHour,
+                  ),
+                ],
               ),
             )
           ],
@@ -237,6 +284,55 @@ class _TimeSelectState extends State<TimeSelect> {
 typedef void DayPeriodSelectCallback(DayPeriod period);
 
 enum DayPeriod { morning, day, evening }
+
+class DayPeriodHelper {
+  /// Generates a list that contains hours for the [period]
+  static List<int> periodHours(DayPeriod period) {
+    return List.generate(8, (index) {
+      switch (period) {
+        case DayPeriod.morning:
+          return index + 4;
+        case DayPeriod.day:
+          return index + 12;
+        case DayPeriod.evening:
+          return (index + 20) % 24;
+
+        default:
+          return index;
+      }
+    });
+  }
+
+  /// Returns starting hour for the [period]
+  static int periodToStartingHour(DayPeriod period) {
+    switch (period) {
+      case DayPeriod.morning:
+        return 4;
+      case DayPeriod.day:
+        return 12;
+      case DayPeriod.evening:
+        return 20;
+
+      default:
+        return 0;
+    }
+  }
+
+  /// Returns a string representation of the [period]
+  static String periodToString(DayPeriod period) {
+    switch (period) {
+      case DayPeriod.morning:
+        return "Morning";
+      case DayPeriod.day:
+        return "Day";
+      case DayPeriod.evening:
+        return "Evening";
+
+      default:
+        return "";
+    }
+  }
+}
 
 class DayPeriodSelect extends StatelessWidget {
   const DayPeriodSelect(
@@ -262,17 +358,6 @@ class DayPeriodSelect extends StatelessWidget {
     );
   }
 
-  String _convertDayPeriodToString(DayPeriod period) {
-    switch (period) {
-      case DayPeriod.morning:
-        return "Morning";
-      case DayPeriod.day:
-        return "Day";
-      case DayPeriod.evening:
-        return "Evening";
-    }
-  }
-
   Widget _buildLabel(DayPeriod period, bool active) {
     return GestureDetector(
       onTap: () => onSelect(period),
@@ -284,7 +369,7 @@ class DayPeriodSelect extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.only(left: 7, right: 7, bottom: 14),
           child: Text(
-            _convertDayPeriodToString(period),
+            DayPeriodHelper.periodToString(period),
             style: (active
                     ? TextStyles.airbnbCerealMedium
                     : TextStyles.airbnbCerealBook)
@@ -296,16 +381,15 @@ class DayPeriodSelect extends StatelessWidget {
   }
 }
 
-class TimeOfDaySelect extends StatefulWidget {
-  const TimeOfDaySelect({Key key, this.controller}) : super(key: key);
+typedef TimeSelectCallback(int time);
 
-  final ScrollController controller;
+class TimeOfDayPage extends StatelessWidget {
+  const TimeOfDayPage({Key key, @required this.forPeriod, this.onSelect, this.selectedHour}) : super(key: key);
 
-  @override
-  _TimeOfDaySelectState createState() => _TimeOfDaySelectState();
-}
+  final TimeSelectCallback onSelect;
+  final DayPeriod forPeriod;
+  final int selectedHour;
 
-class _TimeOfDaySelectState extends State<TimeOfDaySelect> {
   @override
   Widget build(BuildContext context) {
     return GridView.count(
@@ -313,46 +397,65 @@ class _TimeOfDaySelectState extends State<TimeOfDaySelect> {
       crossAxisCount: 2,
       mainAxisSpacing: 40,
       crossAxisSpacing: 37,
-      controller: widget.controller,
-      children: List.generate(
-          24,
-          (index) =>
-              _buildGridItem("${index < 10 ? "0$index" : index}:00", 100)),
+      children: DayPeriodHelper.periodHours(forPeriod)
+          .map((hour) => _buildGridItem(hour, 100))
+          .toList(),
     );
   }
 
-  Widget _buildGridItem(String time, int price) {
-    return Container(
-      width: 145,
-      height: 145,
-      decoration: BoxDecoration(
+  String _intToHourString(int hour) {
+    if (hour < 10) {
+      return "0$hour:00";
+    }
+
+    return "$hour:00";
+  }
+
+  Widget _buildGridItem(int hour, int price) {
+    final isSelected = selectedHour == hour;
+    
+    return GestureDetector(
+      onTap: () => onSelect(hour),
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        transform: isSelected ? Matrix4.translationValues(20, -20, 0) : Matrix4.identity(),
+        width: 145,
+        height: 145,
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
-          color: Colors.darkGray.withOpacity(0.1)),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget>[
-          Text(
-            time,
-            style: TextStyles.airbnbCerealMedium
-                .copyWith(fontSize: 24, color: Colors.black),
-          ),
-          SizedBox(
-            height: 20,
-          ),
-          RichText(
-            text: TextSpan(children: <TextSpan>[
-              TextSpan(
-                  text: "\$$price /",
-                  style: TextStyles.airbnbCerealMedium
-                      .copyWith(fontSize: 14, color: Colors.black)),
-              TextSpan(
-                  text: " person",
-                  style: TextStyles.airbnbCerealBook.copyWith(
-                      fontSize: 12, color: Colors.black.withOpacity(0.6)))
-            ]),
-          )
-        ],
+          color: isSelected ? Colors.blue : Colors.darkGray.withOpacity(0.1),
+          boxShadow: isSelected ? <BoxShadow>[
+            BoxShadow(color: Colors.darkSlateBlue.withOpacity(0.12), offset: Offset(0, 16), blurRadius: 32),
+            BoxShadow(color: Colors.blue.withOpacity(0.1), offset: Offset(-20, 20), blurRadius: 20)
+          ] : <BoxShadow>[],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Text(
+              _intToHourString(hour),
+              style: TextStyles.airbnbCerealMedium
+                  .copyWith(fontSize: 24, color: isSelected ? Colors.white : Colors.black),
+            ),
+            SizedBox(
+              height: 20,
+            ),
+            RichText(
+              text: TextSpan(children: <TextSpan>[
+                TextSpan(
+                    text: "\$$price /",
+                    style: TextStyles.airbnbCerealMedium
+                        .copyWith(fontSize: 14, color: isSelected ? Colors.white : Colors.black)),
+                TextSpan(
+                    text: " person",
+                    style: TextStyles.airbnbCerealBook.copyWith(
+                        fontSize: 12, color: (isSelected ? Colors.white : Colors.black).withOpacity(0.6)))
+              ]),
+            )
+          ],
+        ),
       ),
     );
   }
