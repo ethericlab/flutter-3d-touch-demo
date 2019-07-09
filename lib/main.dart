@@ -210,7 +210,7 @@ class BottomCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: Duration(milliseconds: 400),
-      curve: Curves.easeInOut,
+      curve: Curves.easeInOutCubic,
       transform:
           isOpen ? Matrix4.identity() : Matrix4.translationValues(0, 315, 0),
       decoration: BoxDecoration(
