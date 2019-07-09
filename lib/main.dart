@@ -278,6 +278,7 @@ class _TimeSelectState extends State<TimeSelect> {
   }
 
   void handlePageChange(int page) {
+    print('changing page to $page');
     setState(() {
       _selectedDayPeriod = _pageIndexToPeriod(page);
     });
@@ -285,9 +286,9 @@ class _TimeSelectState extends State<TimeSelect> {
 
   void handlePeriodSelect(DayPeriod period) {
     _pageController.animateToPage(_periodToPageIndex(period),
-        duration: Duration(milliseconds: 400), curve: Curves.easeInOut);
-    setState(() {
-      _selectedDayPeriod = period;
+        duration: Duration(milliseconds: 400), curve: Curves.easeInOut)
+    .whenComplete(() {
+      setState(() => _selectedDayPeriod = period);
     });
   }
 
