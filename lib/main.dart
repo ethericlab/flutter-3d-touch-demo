@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/painting.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
@@ -28,6 +29,8 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  bool _isTimeCardOpen = false;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -42,12 +45,31 @@ class _HomeState extends State<Home> {
           ),
           Expanded(
             child: Stack(
-              children: <Widget>[RestaurantSelect(), TimeSelect()],
+              children: <Widget>[
+                RestaurantSelect(
+                  onSelect: _handleRestaurantSelect,
+                ),
+                BottomCard(
+                  isOpen: _isTimeCardOpen,
+                  onToggle: _toggleTimeCard,
+                  child: TimeSelect(
+                    onCardToggle: _toggleTimeCard,
+                  ),
+                )
+              ],
             ),
           )
         ],
       ),
     );
+  }
+
+  _toggleTimeCard() => setState(() => _isTimeCardOpen = !_isTimeCardOpen);
+
+  _handleRestaurantSelect(String name) {
+    setState(() {
+      _isTimeCardOpen = true;
+    });
   }
 }
 
@@ -96,8 +118,12 @@ class AppBar extends StatelessWidget {
   }
 }
 
+typedef RestaurantSelectCallback(String restaurant);
+
 class RestaurantSelect extends StatelessWidget {
-  RestaurantSelect({Key key}) : super(key: key);
+  RestaurantSelect({Key key, this.onSelect}) : super(key: key);
+
+  final RestaurantSelectCallback onSelect;
 
   final List<String> _restaurantImages = const [
     "images/burger_king.png",
@@ -153,23 +179,55 @@ class RestaurantSelect extends StatelessWidget {
   }
 
   Widget _buildRestaurantItem(String image, String name) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: <Widget>[
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Image(height: 120, width: 90, image: AssetImage(image)),
-        ),
-        SizedBox(
-          height: 14,
-        ),
-        Text(name, style: TextStyles.airbnbCerealBook.copyWith(fontSize: 12))
-      ],
+    return TapOpacity(
+      onTap: () => onSelect(name),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image(height: 120, width: 90, image: AssetImage(image)),
+          ),
+          SizedBox(
+            height: 14,
+          ),
+          Text(name, style: TextStyles.airbnbCerealBook.copyWith(fontSize: 12))
+        ],
+      ),
+    );
+  }
+}
+
+class BottomCard extends StatelessWidget {
+  const BottomCard({Key key, this.child, this.isOpen, this.onToggle})
+      : super(key: key);
+
+  final Widget child;
+  final bool isOpen;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+      transform:
+          isOpen ? Matrix4.identity() : Matrix4.translationValues(0, 315, 0),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(34), topRight: Radius.circular(34)),
+        color: Colors.white,
+      ),
+      child: child,
     );
   }
 }
 
 class TimeSelect extends StatefulWidget {
+  const TimeSelect({Key key, this.onCardToggle}) : super(key: key);
+
+  final VoidCallback onCardToggle;
+
   @override
   _TimeSelectState createState() => _TimeSelectState();
 }
@@ -226,12 +284,13 @@ class _TimeSelectState extends State<TimeSelect> {
   }
 
   void handlePeriodSelect(DayPeriod period) {
-    _pageController.animateToPage(_periodToPageIndex(period), duration: Duration(milliseconds: 400), curve: Curves.easeInOut);
+    _pageController.animateToPage(_periodToPageIndex(period),
+        duration: Duration(milliseconds: 400), curve: Curves.easeInOut);
     setState(() {
       _selectedDayPeriod = period;
     });
   }
-  
+
   void handleTimeSelect(int hour) {
     setState(() {
       _selectedHour = _selectedHour == hour ? null : hour;
@@ -240,44 +299,38 @@ class _TimeSelectState extends State<TimeSelect> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(34), topRight: Radius.circular(34)),
-          color: Colors.white,
+    return Column(
+      children: <Widget>[
+        DayPeriodSelect(
+          selectedPeriod: _selectedDayPeriod,
+          onSelect: handlePeriodSelect,
+          onCardToggle: widget.onCardToggle,
         ),
-        child: Column(
-          children: <Widget>[
-            SizedBox(height: 34),
-            DayPeriodSelect(
-              selectedPeriod: _selectedDayPeriod,
-              onSelect: handlePeriodSelect,
-            ),
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: handlePageChange,
-                children: <Widget>[
-                  TimeOfDayPage(
-                    forPeriod: DayPeriod.morning,
-                    onSelect: handleTimeSelect,
-                    selectedHour: _selectedHour,
-                  ),
-                  TimeOfDayPage(
-                    forPeriod: DayPeriod.day,
-                    onSelect: handleTimeSelect,
-                    selectedHour: _selectedHour,
-                  ),
-                  TimeOfDayPage(
-                    forPeriod: DayPeriod.evening,
-                    onSelect: handleTimeSelect,
-                    selectedHour: _selectedHour,
-                  ),
-                ],
+        Expanded(
+          child: PageView(
+            controller: _pageController,
+            onPageChanged: handlePageChange,
+            children: <Widget>[
+              TimeOfDayPage(
+                forPeriod: DayPeriod.morning,
+                onSelect: handleTimeSelect,
+                selectedHour: _selectedHour,
               ),
-            )
-          ],
-        ));
+              TimeOfDayPage(
+                forPeriod: DayPeriod.day,
+                onSelect: handleTimeSelect,
+                selectedHour: _selectedHour,
+              ),
+              TimeOfDayPage(
+                forPeriod: DayPeriod.evening,
+                onSelect: handleTimeSelect,
+                selectedHour: _selectedHour,
+              ),
+            ],
+          ),
+        )
+      ],
+    );
   }
 }
 
@@ -336,25 +389,46 @@ class DayPeriodHelper {
 
 class DayPeriodSelect extends StatelessWidget {
   const DayPeriodSelect(
-      {Key key, this.onSelect, this.selectedPeriod = DayPeriod.morning})
+      {Key key, this.onSelect, this.selectedPeriod = DayPeriod.morning, this.onCardToggle})
       : super(key: key);
 
   final DayPeriodSelectCallback onSelect;
+  final VoidCallback onCardToggle;
   final DayPeriod selectedPeriod;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-          border:
-              Border(bottom: BorderSide(color: Colors.gray.withOpacity(0.2)))),
-      child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Stack(
+      children: <Widget>[
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+                border:
+                Border(bottom: BorderSide(color: Colors.gray.withOpacity(0.2)))),
+          ),
+        ),
+        Column(
           children: <Widget>[
-            _buildLabel(DayPeriod.morning, selectedPeriod == DayPeriod.morning),
-            _buildLabel(DayPeriod.day, selectedPeriod == DayPeriod.day),
-            _buildLabel(DayPeriod.evening, selectedPeriod == DayPeriod.evening)
-          ]),
+            SizedBox(
+              height: 16,
+            ),
+            Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: <Widget>[
+                  _buildLabel(
+                      DayPeriod.morning, selectedPeriod == DayPeriod.morning),
+                  _buildLabel(DayPeriod.day, selectedPeriod == DayPeriod.day),
+                  _buildLabel(
+                      DayPeriod.evening, selectedPeriod == DayPeriod.evening)
+                ]),
+          ],
+        ),
+        Positioned(
+          top: 22,
+          right: 10,
+          child: _buildToggleButton(),
+        )
+      ],
     );
   }
 
@@ -367,7 +441,7 @@ class DayPeriodSelect extends StatelessWidget {
                 bottom:
                     active ? BorderSide(color: Colors.blue) : BorderSide.none)),
         child: Padding(
-          padding: EdgeInsets.only(left: 7, right: 7, bottom: 14),
+          padding: EdgeInsets.only(left: 7, right: 7, bottom: 18, top: 18),
           child: Text(
             DayPeriodHelper.periodToString(period),
             style: (active
@@ -379,12 +453,29 @@ class DayPeriodSelect extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildToggleButton() {
+    return TapOpacity(
+      onTap: onCardToggle,
+      child: Container(
+        width: 40,
+        height: 40,
+        child: Image(
+          width: 25,
+          height: 25,
+          image: AssetImage('images/colon.png'),
+        ),
+      ),
+    );
+  }
 }
 
 typedef TimeSelectCallback(int time);
 
 class TimeOfDayPage extends StatelessWidget {
-  const TimeOfDayPage({Key key, @required this.forPeriod, this.onSelect, this.selectedHour}) : super(key: key);
+  const TimeOfDayPage(
+      {Key key, @required this.forPeriod, this.onSelect, this.selectedHour})
+      : super(key: key);
 
   final TimeSelectCallback onSelect;
   final DayPeriod forPeriod;
@@ -409,24 +500,28 @@ class TimeOfDayPage extends StatelessWidget {
 
   Widget _buildGridItem(int hour, int price) {
     final isSelected = selectedHour == hour;
-    final contentBuilder = () => _buildItemContent(hour, price, true, isSelected);
+    final contentBuilder =
+        () => _buildItemContent(hour, price, true, isSelected);
 
     return GestureDetector(
         onTap: () => onSelect(hour),
-        child: isSelected ? _buildSelectedItem(hour % 2 == 1, contentBuilder) : _buildNormalItem(contentBuilder)
-    );
+        child: isSelected
+            ? _buildSelectedItem(hour % 2 == 1, contentBuilder)
+            : _buildNormalItem(contentBuilder));
   }
 
   _buildSelectedItem(bool isRight, Widget buildContent()) {
     return AnimatedContainer(
         duration: Duration(milliseconds: 200),
         curve: Curves.easeOut,
-        transform: isRight ? Matrix4.translationValues(-20, -20, 0) : Matrix4.translationValues(20, -20, 0),
+        transform: isRight
+            ? Matrix4.translationValues(-20, -20, 0)
+            : Matrix4.translationValues(20, -20, 0),
         width: 145,
         height: 145,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
-          color: Colors.blue ,
+          color: Colors.blue,
           boxShadow: <BoxShadow>[
             BoxShadow(
                 color: Colors.darkSlateBlue.withOpacity(0.12),
@@ -438,8 +533,7 @@ class TimeOfDayPage extends StatelessWidget {
                 blurRadius: 20)
           ],
         ),
-        child: buildContent()
-    );
+        child: buildContent());
   }
 
   Widget _buildNormalItem(Widget buildContent()) {
@@ -453,11 +547,11 @@ class TimeOfDayPage extends StatelessWidget {
           borderRadius: BorderRadius.circular(15),
           color: Colors.darkGray.withOpacity(0.1),
         ),
-        child: buildContent()
-    );
+        child: buildContent());
   }
 
-  Widget _buildItemContent(int hour, int price, bool isEnabled, bool isSelected) {
+  Widget _buildItemContent(
+      int hour, int price, bool isEnabled, bool isSelected) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -465,8 +559,7 @@ class TimeOfDayPage extends StatelessWidget {
         Text(
           _intToHourString(hour),
           style: TextStyles.airbnbCerealMedium.copyWith(
-              fontSize: 24,
-              color: isSelected ? Colors.white : Colors.black),
+              fontSize: 24, color: isSelected ? Colors.white : Colors.black),
         ),
         SizedBox(
           height: 20,
@@ -496,6 +589,92 @@ class TimeOfDayPage extends StatelessWidget {
     }
 
     return "$hour:00";
+  }
+}
+
+class TapOpacity extends StatefulWidget {
+  TapOpacity(
+      {@required this.onTap,
+      @required this.child,
+      this.disabled = false,
+      this.opacity = 1,
+      this.tapOpacity = 0.5,
+      this.duration = const Duration(milliseconds: 300),
+      this.curve = Curves.easeInOut});
+
+  final Widget child;
+  final GestureTapCallback onTap;
+  final Curve curve;
+  final double opacity;
+  final double tapOpacity;
+  final Duration duration;
+  final bool disabled;
+
+  @override
+  State<StatefulWidget> createState() => _TapOpacityState();
+}
+
+class _TapOpacityState extends State<TapOpacity>
+    with SingleTickerProviderStateMixin {
+  AnimationController _controller;
+  Animation _opacity;
+
+  @override
+  void initState() {
+    _controller = AnimationController(
+        vsync: this, value: 1, lowerBound: 0, upperBound: 1);
+    _opacity = Tween<double>(begin: widget.tapOpacity, end: widget.opacity)
+        .animate(_controller);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+      onTap: !widget.disabled ? widget.onTap : null,
+      onTapDown: (_) => _animateTapDown(),
+      onTapUp: (_) => _animateTapUp(),
+      onTapCancel: () => _animateTapUp(),
+      child: _AnimatedTapOpacity(
+        animation: _opacity,
+        child: widget.child,
+      ));
+
+  _animateTapDown() {
+    _controller.duration = Duration(milliseconds: 50);
+    _controller.reverse();
+  }
+
+  _animateTapUp() {
+    _controller.duration = widget.duration;
+    if (_controller.status != AnimationStatus.completed) {
+      Timer(Duration(milliseconds: 200), () {
+        _controller.forward();
+      });
+    } else {
+      _controller.forward();
+    }
+  }
+}
+
+class _AnimatedTapOpacity extends AnimatedWidget {
+  _AnimatedTapOpacity({Key key, this.animation, this.child})
+      : super(key: key, listenable: animation);
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: animation.value,
+      child: child,
+    );
   }
 }
 
