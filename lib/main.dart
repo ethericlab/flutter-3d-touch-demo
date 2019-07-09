@@ -425,7 +425,7 @@ class DayPeriodSelect extends StatelessWidget {
         ),
         Positioned(
           top: 22,
-          right: 10,
+          right: 5,
           child: _buildToggleButton(),
         )
       ],
