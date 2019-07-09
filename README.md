@@ -8,3 +8,7 @@
 - [Install Flutter](https://flutter.dev/docs/get-started/install)
 - Open Android Studio or VS Code
 - Run the app on am emulator or a real device
+
+## License
+
+3D Touch is available under the MIT license. See the LICENSE file for more info.
