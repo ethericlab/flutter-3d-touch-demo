@@ -30,6 +30,7 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   bool _isTimeCardOpen = false;
+  String _selectedRestaurant = 'Burger King';
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +48,7 @@ class _HomeState extends State<Home> {
             child: Stack(
               children: <Widget>[
                 RestaurantSelect(
+                  selectedRestaurant: _selectedRestaurant,
                   onSelect: _handleRestaurantSelect,
                 ),
                 BottomCard(
@@ -69,6 +71,7 @@ class _HomeState extends State<Home> {
   _handleRestaurantSelect(String name) {
     setState(() {
       _isTimeCardOpen = true;
+      _selectedRestaurant = name;
     });
   }
 }
@@ -121,9 +124,10 @@ class AppBar extends StatelessWidget {
 typedef RestaurantSelectCallback(String restaurant);
 
 class RestaurantSelect extends StatelessWidget {
-  RestaurantSelect({Key key, this.onSelect}) : super(key: key);
+  RestaurantSelect({Key key, this.onSelect, this.selectedRestaurant}) : super(key: key);
 
   final RestaurantSelectCallback onSelect;
+  final String selectedRestaurant;
 
   final List<String> _restaurantImages = const [
     "images/burger_king.png",
@@ -145,7 +149,7 @@ class RestaurantSelect extends StatelessWidget {
       children: <Widget>[
         _buildTitleLabel(),
         SizedBox(
-          height: 50,
+          height: 30,
         ),
         _buildRestaurantList(),
       ],
@@ -164,14 +168,14 @@ class RestaurantSelect extends StatelessWidget {
 
   Widget _buildRestaurantList() {
     return SizedBox(
-      height: 150,
+      height: 170,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _restaurantNames.length,
         separatorBuilder: (BuildContext context, _) => SizedBox(
               width: 16,
             ),
-        padding: EdgeInsets.only(left: 24),
+        padding: EdgeInsets.only(left: 24, top: 20),
         itemBuilder: (BuildContext context, int index) => _buildRestaurantItem(
             _restaurantImages[index], _restaurantNames[index]),
       ),
@@ -179,21 +183,27 @@ class RestaurantSelect extends StatelessWidget {
   }
 
   Widget _buildRestaurantItem(String image, String name) {
+    final isSelected = selectedRestaurant == name;
+
     return TapOpacity(
       onTap: () => onSelect(name),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image(height: 120, width: 90, image: AssetImage(image)),
+          AnimatedContainer(
+            duration: Duration(milliseconds: 200),
+            transform: isSelected ? Matrix4.translationValues(0, -20, 20) : Matrix4.identity(),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image(height: 120, width: 90, image: AssetImage(image)),
+            ),
           ),
           SizedBox(
             height: 14,
           ),
           Text(name, style: TextStyles.airbnbCerealBook.copyWith(fontSize: 12))
         ],
-      ),
+      )
     );
   }
 }
