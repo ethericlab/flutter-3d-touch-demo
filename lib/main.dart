@@ -340,7 +340,6 @@ class _TimeSelectState extends State<TimeSelect> {
   }
 
   void _handlePageChange(int page) {
-    print('changing page to $page');
     setState(() {
       _selectedDayPeriod = _pageIndexToPeriod(page);
     });
