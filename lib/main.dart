@@ -124,7 +124,8 @@ class AppBar extends StatelessWidget {
 typedef RestaurantSelectCallback(String restaurant);
 
 class RestaurantSelect extends StatelessWidget {
-  RestaurantSelect({Key key, this.onSelect, this.selectedRestaurant}) : super(key: key);
+  RestaurantSelect({Key key, this.onSelect, this.selectedRestaurant})
+      : super(key: key);
 
   final RestaurantSelectCallback onSelect;
   final String selectedRestaurant;
@@ -186,25 +187,27 @@ class RestaurantSelect extends StatelessWidget {
     final isSelected = selectedRestaurant == name;
 
     return TapOpacity(
-      onTap: () => onSelect(name),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          AnimatedContainer(
-            duration: Duration(milliseconds: 200),
-            transform: isSelected ? Matrix4.translationValues(0, -20, 20) : Matrix4.identity(),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image(height: 120, width: 90, image: AssetImage(image)),
+        onTap: () => onSelect(name),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            AnimatedContainer(
+              duration: Duration(milliseconds: 200),
+              transform: isSelected
+                  ? Matrix4.translationValues(0, -20, 0)
+                  : Matrix4.identity(),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image(height: 120, width: 90, image: AssetImage(image)),
+              ),
             ),
-          ),
-          SizedBox(
-            height: 14,
-          ),
-          Text(name, style: TextStyles.airbnbCerealBook.copyWith(fontSize: 12))
-        ],
-      )
-    );
+            SizedBox(
+              height: 14,
+            ),
+            Text(name,
+                style: TextStyles.airbnbCerealBook.copyWith(fontSize: 12))
+          ],
+        ));
   }
 }
 
@@ -259,6 +262,55 @@ class _TimeSelectState extends State<TimeSelect> {
     super.dispose();
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        Column(
+          children: <Widget>[
+            DayPeriodSelect(
+              selectedPeriod: _selectedDayPeriod,
+              onSelect: _handlePeriodSelect,
+              onCardToggle: widget.onCardToggle,
+            ),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: _handlePageChange,
+                children: <Widget>[
+                  TimeOfDayPage(
+                    forPeriod: DayPeriod.morning,
+                    onSelect: _handleTimeSelect,
+                    selectedHour: _selectedHour,
+                  ),
+                  TimeOfDayPage(
+                    forPeriod: DayPeriod.day,
+                    onSelect: _handleTimeSelect,
+                    selectedHour: _selectedHour,
+                  ),
+                  TimeOfDayPage(
+                    forPeriod: DayPeriod.evening,
+                    onSelect: _handleTimeSelect,
+                    selectedHour: _selectedHour,
+                  ),
+                ],
+              ),
+            )
+          ],
+        ),
+        AnimatedPositioned(
+            duration: Duration(milliseconds: 200),
+            left: 0,
+            right: 0,
+            bottom: _selectedHour != null ? 0 : -88,
+            height: 88,
+            child: BookFragment(
+              price: 100,
+            )),
+      ],
+    );
+  }
+
   int _periodToPageIndex(DayPeriod period) {
     switch (period) {
       case DayPeriod.morning:
@@ -287,60 +339,83 @@ class _TimeSelectState extends State<TimeSelect> {
     }
   }
 
-  void handlePageChange(int page) {
+  void _handlePageChange(int page) {
     print('changing page to $page');
     setState(() {
       _selectedDayPeriod = _pageIndexToPeriod(page);
     });
   }
 
-  void handlePeriodSelect(DayPeriod period) {
-    _pageController.animateToPage(_periodToPageIndex(period),
-        duration: Duration(milliseconds: 400), curve: Curves.easeInOut)
-    .whenComplete(() {
+  void _handlePeriodSelect(DayPeriod period) {
+    _pageController
+        .animateToPage(_periodToPageIndex(period),
+            duration: Duration(milliseconds: 400), curve: Curves.easeInOut)
+        .whenComplete(() {
       setState(() => _selectedDayPeriod = period);
     });
   }
 
-  void handleTimeSelect(int hour) {
+  void _handleTimeSelect(int hour) {
     setState(() {
       _selectedHour = _selectedHour == hour ? null : hour;
     });
   }
+}
+
+class BookFragment extends StatelessWidget {
+  const BookFragment({Key key, @required this.price}) : super(key: key);
+
+  final double price;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        DayPeriodSelect(
-          selectedPeriod: _selectedDayPeriod,
-          onSelect: handlePeriodSelect,
-          onCardToggle: widget.onCardToggle,
-        ),
-        Expanded(
-          child: PageView(
-            controller: _pageController,
-            onPageChanged: handlePageChange,
-            children: <Widget>[
-              TimeOfDayPage(
-                forPeriod: DayPeriod.morning,
-                onSelect: handleTimeSelect,
-                selectedHour: _selectedHour,
-              ),
-              TimeOfDayPage(
-                forPeriod: DayPeriod.day,
-                onSelect: handleTimeSelect,
-                selectedHour: _selectedHour,
-              ),
-              TimeOfDayPage(
-                forPeriod: DayPeriod.evening,
-                onSelect: handleTimeSelect,
-                selectedHour: _selectedHour,
-              ),
-            ],
+    return Container(
+      height: 88,
+      color: Colors.white,
+      child: Stack(
+        children: <Widget>[
+          Positioned(
+            top: 31,
+            bottom: 31,
+            left: 40,
+            child: RichText(
+                text: TextSpan(children: <TextSpan>[
+              TextSpan(
+                  text: '\$',
+                  style: TextStyles.airbnbCerealMedium.copyWith(
+                      fontSize: 12, color: Colors.black.withOpacity(0.75))),
+              TextSpan(
+                  text: price.toStringAsFixed(2),
+                  style: TextStyles.airbnbCerealMedium
+                      .copyWith(fontSize: 20, color: Colors.black))
+            ])),
           ),
-        )
-      ],
+          Positioned(
+            top: 18,
+            bottom: 18,
+            right: 24,
+            child: TapOpacity(
+                onTap: () {},
+                child: Container(
+                  width: 135,
+                  height: 52,
+                  decoration: BoxDecoration(
+                      color: Colors.blue,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: <BoxShadow>[
+                        BoxShadow(
+                            color: Colors.blue.withOpacity(0.2),
+                            blurRadius: 24,
+                            offset: Offset(0, 8))
+                      ]),
+                  child: Center(
+                      child: Text("Book",
+                          style: TextStyles.airbnbCerealMedium
+                              .copyWith(fontSize: 16, color: Colors.white))),
+                )),
+          )
+        ],
+      ),
     );
   }
 }
@@ -400,7 +475,10 @@ class DayPeriodHelper {
 
 class DayPeriodSelect extends StatelessWidget {
   const DayPeriodSelect(
-      {Key key, this.onSelect, this.selectedPeriod = DayPeriod.morning, this.onCardToggle})
+      {Key key,
+      this.onSelect,
+      this.selectedPeriod = DayPeriod.morning,
+      this.onCardToggle})
       : super(key: key);
 
   final DayPeriodSelectCallback onSelect;
@@ -414,8 +492,8 @@ class DayPeriodSelect extends StatelessWidget {
         Positioned.fill(
           child: Container(
             decoration: BoxDecoration(
-                border:
-                Border(bottom: BorderSide(color: Colors.gray.withOpacity(0.2)))),
+                border: Border(
+                    bottom: BorderSide(color: Colors.gray.withOpacity(0.2)))),
           ),
         ),
         Column(
